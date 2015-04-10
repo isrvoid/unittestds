@@ -17,14 +17,14 @@ $(BUILDDIR)/gendsu_t: $(GENDSU_SRC)
 $(BUILDDIR)/gendsu: $(GENDSU_SRC)
 	@dmd $(DFLAGS) $^ -of$@
 
-$(BUILDDIR)/dummyTestdriver: src/testdriverTemplate.c src/testdriverDummyPlugin.c
-	@$(CC) $(CFLAGS) -D_TESTDRIVER_DUMMY_PLUGIN $< -o $@
+$(BUILDDIR)/dummyDriver: src/unittestDriverTemplate.c src/dummyPlugin.c
+	@$(CC) $(CFLAGS) -D_UNITTEST_DUMMY_PLUGIN $< -o $@
 
 gendsu_t: $(BUILDDIR)/gendsu_t
 
 gendsu: $(BUILDDIR)/gendsu
 
-dummyTestdriver: $(BUILDDIR)/dummyTestdriver
+dummyDriver: $(BUILDDIR)/dummyDriver
 
 clean:
 	-@$(RM) $(wildcard $(BUILDDIR)/*)
