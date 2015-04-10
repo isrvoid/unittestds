@@ -1,0 +1,3 @@
+
+#define _TESTDRIVER_TEST_COUNT 0
+
