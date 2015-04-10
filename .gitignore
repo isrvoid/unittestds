@@ -29,7 +29,5 @@
 *.hex
 
 # Files
-dummyTestdriver
-*_t
-gendsu
+build/*
 TODO
