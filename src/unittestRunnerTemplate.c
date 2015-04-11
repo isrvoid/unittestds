@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-/* #defines affecting unittest driver behaviour
+/* #defines affecting unittest-runner behaviour
    UNITTEST_MAX_ERRORS - 0 for unlimited
 
    can also be specified as CLA (higher priority than defines):

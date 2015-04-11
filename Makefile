@@ -13,20 +13,16 @@ DFLAGS := -O -release -boundscheck=off
 
 GENDSU_SRC := dsunittest/gendsu.d util/commentBroom.d
 
+default: $(BUILDDIR)/gendsu
+
 $(BUILDDIR)/gendsu_t: $(GENDSU_SRC)
 	@dmd $(DFLAGS_T) $^ -of$@
 
 $(BUILDDIR)/gendsu: $(GENDSU_SRC)
 	@dmd $(DFLAGS) $^ -of$@
 
-$(BUILDDIR)/dummyDriver: src/unittestDriverTemplate.c src/dummyPlugin.c
+$(BUILDDIR)/dummyRunner: src/unittestRunnerTemplate.c src/dummyPlugin.c
 	@$(CC) $(CFLAGS) -D_UNITTEST_DUMMY_PLUGIN $< -o $@
-
-gendsu_t: $(BUILDDIR)/gendsu_t
-
-gendsu: $(BUILDDIR)/gendsu
-
-dummyDriver: $(BUILDDIR)/dummyDriver
 
 clean:
 	-@$(RM) $(wildcard $(BUILDDIR)/*)

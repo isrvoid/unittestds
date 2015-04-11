@@ -16,12 +16,13 @@ int bar(void) {
 The generator utility will add these to test runner.
 Static functions with same signature are ignored.
 
-Please excuse the trivial example. Its purpouse is to show simplicity of adding unit tests to your C code.
+Please bare with contrived multiply functions in the following example.
+Its purpouse is to show simplicity of adding unit tests to your C code.
 ```C
 #include "foo.h"
 
 // private helper
-static int multiplyByTwo(int x); // private helper
+static int multiplyByTwo(int x);
 
 // interface implementation (declared in foo.h)
 int foo_multiplyByFour(int x) {
