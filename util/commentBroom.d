@@ -40,14 +40,18 @@ enum
     rStringEnd = ctRegex!(pStringEnd)
 }
 
-enum postErrorMsg = [lineCommentStart:"missing line terminator", blockCommentStart:"unterminated block comment",
-                  stringStart:"unterminated string"];
+enum missingTerminatorWarnings = [lineCommentStart:"missing line terminator",
+                               blockCommentStart:"unterminated block comment",
+                               stringStart:"unterminated string"];
 
-/* Removes C-style comments and strings.
-Block comments and strings are replaced with a space.
+public string lastWarning;
+
+/* Removes C-style comments and strings to allow easier parsing of source files.
+Block comments are replaced with a space.
+Strings are replaced with given argument.
 For simplicity, also removes unterminated block comment or string
 at the end of the input (printing a warning).  */
-public string removeCommentsAndStrings(string s) @safe
+public string removeCommentsAndStrings(string strReplacement = " s ")(string s) @safe
 {
     import std.array : appender;
     auto app = appender!string();
@@ -67,9 +71,7 @@ public string removeCommentsAndStrings(string s) @safe
         app.put(cap.pre);
         remaining = cap.post;
 
-        bool isLineComment = (cap.hit == lineCommentStart);
-        if (!isLineComment)
-            app.put(' ');
+        app.put(getReplacement!strReplacement(cap.hit));
 
         try
         {
@@ -77,11 +79,26 @@ public string removeCommentsAndStrings(string s) @safe
         }
         catch (NoMatchException)
         {
+            lastWarning = missingTerminatorWarnings[cap.hit];
             remaining = remaining.getLineTerminatorAtBack();
         }
     }
 
     return app.data;
+}
+
+string getReplacement(string strReplacement)(string matchedStart)
+{
+    if (matchedStart == lineCommentStart)
+        return "";
+
+    if (matchedStart == blockCommentStart)
+        return " ";
+
+    if (matchedStart == stringStart)
+        return strReplacement;
+
+    assert(0);
 }
 
 string getPost(RegEx)(string s, RegEx postRegex) @safe
@@ -105,7 +122,7 @@ StaticRegex!char getEndRegex(string matchedStart) pure nothrow @safe
     if (matchedStart == stringStart)
         return rStringEnd;
 
-    assert(false);
+    assert(0);
 }
 
 string getLineTerminatorAtBack(string s) pure nothrow @safe
@@ -123,6 +140,7 @@ string getLineTerminatorAtBack(string s) pure nothrow @safe
 version (unittest)
 {
     import std.file;
+    import std.stdio;
 
     enum verifyExtension = "_expected";
 
@@ -143,6 +161,9 @@ unittest
     foreach (filename; getTestInputFilenames()) {
         auto input = readText(filename);
         auto expectedOutput = readText(filename ~ verifyExtension);
-        assert(input.removeCommentsAndStrings() == expectedOutput, filename);
+        lastWarning = null;
+        assert(input.removeCommentsAndStrings!" "() == expectedOutput, filename);
+        if (!lastWarning.empty)
+            writeln(filename, ": warning: ", lastWarning);
     }
 }
