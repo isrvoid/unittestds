@@ -4,8 +4,6 @@ import std.regex;
 import std.algorithm.searching;
 import std.range;
 
-private:
-
 class NoMatchException : Exception
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__, Throwable next = null) pure nothrow @safe
@@ -13,6 +11,8 @@ class NoMatchException : Exception
         super(msg, file, line, next);
     }
 }
+
+private:
 
 enum
 {
@@ -161,9 +161,6 @@ unittest
     foreach (filename; getTestInputFilenames()) {
         auto input = readText(filename);
         auto expectedOutput = readText(filename ~ verifyExtension);
-        lastWarning = null;
         assert(input.removeCommentsAndStrings!" "() == expectedOutput, filename);
-        if (!lastWarning.empty)
-            writeln(filename, ": warning: ", lastWarning);
     }
 }
