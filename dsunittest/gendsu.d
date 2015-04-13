@@ -20,7 +20,7 @@ void writeWarning(string filename, string msg)
     stderr.writeln(filename, ": warning: ", msg);
 }
 
-string makeNoMatchMsg(string filename)
+string makeNoMatchMsg(string filename) pure nothrow @safe
 {
     return filename ~ ": error: unterminated UNITTEST block";
 }
@@ -39,18 +39,17 @@ struct UnittestFunctionFinder
 
     public string[] names;
 
+
     version (unittest)
     {
+        public this(string s)
+        {
+            remaining = s;
+        }
     }
     else
     {
         @disable this();
-    }
-
-    public this(string filename)
-    {
-        string s = readText(filename);
-        this(s, filename);
     }
 
     public this(string s, string filename)
@@ -65,12 +64,19 @@ struct UnittestFunctionFinder
         // FIXME continue
     }
 
-    string getNextBlock()
+    string getBlocks() @safe
     {
-        return getNextBlock(remaining);
+        auto app = appender!string();
+        do
+        {
+            app.put(getNextBlock(remaining));
+        }
+        while (!blockNotFound);
+
+        return app.data;
     }
 
-    string getNextBlock(ref string s)
+    string getNextBlock(ref string s) @safe
     {
         enum
         {
@@ -127,3 +133,12 @@ unittest
     assert(ff.blockNotFound);
     assert(notABlock == "foo bar");
 }
+
+    // getBlocks
+unittest
+{
+    enum blocks = "#ifdef UNITTESTfun#endif don't care #  ifdef UNITTEST gun#endif";
+    UnittestFunctionFinder ff = blocks;
+    assert(ff.getBlocks() == "fun gun");
+}
+
