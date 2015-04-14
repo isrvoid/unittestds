@@ -23,25 +23,20 @@ typedef struct {
 static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]);
 static int _unittest_run(_unittest_run_param_t r);
 
-// only to test this template (just ignore)
-#ifdef _UNITTEST_DUMMY_PLUGIN
-#include "dummyPlugin.c"
-#endif
-
 // dsunittest utility inserts generated code at following line
 // @unittest_plugin
 
 int main(int argc, char *argv[]) {
-    _unittest_run_param_t param = _unittest_makeRunParam(argc, argv);
-    int error = _unittest_run(param);
+    _unittest_run_param_t r = _unittest_makeRunParam(argc, argv);
+    int error = _unittest_run(r);
     if (!error)
-        printf("all succeeded\n");
+        printf("%u succeeded\n", _UNITTEST_COUNT);
 
     return error;
 }
 
 static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]) {
-    _unittest_run_param_t param = { 0 };
+    _unittest_run_param_t r = { 0 };
     const char *maxErrorsArg = getenv("UNITTEST_MAX_ERRORS");
     if (!maxErrorsArg)
         maxErrorsArg = "";
@@ -54,9 +49,9 @@ static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]) {
             maxErrorsArg = currentArg + maxErrorsOptionLength;
     }
 
-    param.maxErrors = strtoul(maxErrorsArg, NULL, 10);
+    r.maxErrors = strtoul(maxErrorsArg, NULL, 10);
 
-    return param;
+    return r;
 }
 
 static int _unittest_run(_unittest_run_param_t r) {

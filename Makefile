@@ -1,11 +1,3 @@
-#CWARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
-	-Wwrite-strings -Wmissing-prototypes -Wmissing-declarations \
-	-Wredundant-decls -Wnested-externs -Winline -Wno-long-long \
-	-Wuninitialized -Wconversion -Wstrict-prototypes
-#CWARNINGS := -Weverything
-#CC := clang
-CFLAGS := -std=c11 -O3 $(CWARNINGS)
-
 BUILDDIR := build
 
 DFLAGS_T := -unittest
@@ -20,9 +12,6 @@ $(BUILDDIR)/gendsu_t: $(GENDSU_SRC)
 
 $(BUILDDIR)/gendsu: $(GENDSU_SRC)
 	@dmd $(DFLAGS) $^ -of$@
-
-$(BUILDDIR)/dummyRunner: src/unittestRunnerTemplate.c src/dummyPlugin.c
-	@$(CC) $(CFLAGS) -D_UNITTEST_DUMMY_PLUGIN $< -o $@
 
 clean:
 	-@$(RM) $(wildcard $(BUILDDIR)/*)
