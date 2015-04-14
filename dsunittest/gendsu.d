@@ -14,15 +14,15 @@ void main(string args[])
 }
 
 private:
-void writeWarning(string filename, string msg)
+void writeWarning(string filename, string msg) @safe
 {
     import std.stdio;
-    stderr.writeln(filename, ": warning: ", msg);
+    writeln(filename, ": warning: ", msg);
 }
 
-string makeNoMatchMsg(string filename) pure nothrow @safe
+string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 {
-    return filename ~ ": error: unterminated UNITTEST block";
+    return filename ~ ": error: UNITTEST block is missing #endif";
 }
 
 struct UnittestFunctionFinder
@@ -39,7 +39,6 @@ struct UnittestFunctionFinder
 
     public string[] names;
 
-
     version (unittest)
     {
         public this(string s)
@@ -52,7 +51,7 @@ struct UnittestFunctionFinder
         @disable this();
     }
 
-    public this(string s, string filename)
+    public this(string s, string filename) @safe
     {
         this.filename = filename;
 
@@ -61,7 +60,8 @@ struct UnittestFunctionFinder
         if (!lastWarning.empty)
             writeWarning(filename, lastWarning);
 
-        // FIXME continue
+        auto blocks = getBlocks();
+        names = getNames(blocks);
     }
 
     string getBlocks() @safe
@@ -94,11 +94,11 @@ struct UnittestFunctionFinder
         }
         auto remaining = capStart.post;
 
-        // FIXME count nested preprocessor conditionals
+        // FIXME traverse nested preprocessor conditionals
         auto capEnd = matchFirst(remaining, rEnd);
         if (capEnd.empty)
         {
-            throw new NoMatchException(makeNoMatchMsg(filename));
+            throw new NoMatchException(makeMissingBlockTerminatorMsg(filename));
         }
         remaining = capEnd.post;
         auto content = capEnd.pre;
@@ -107,13 +107,47 @@ struct UnittestFunctionFinder
         return content;
     }
 
-    string[] findNames(string s)
+    string[] getNames(string s) @safe
     {
-        return null;
+        enum
+        {
+            pFunc = r"(?<!static\s+)int\s+(?P<name>\w+)\s*\(\s*(?:void){0,1}\s*\)\s*\{",
+            rFunc = ctRegex!(pFunc)
+        }
+
+        auto app = appender!(string[])();
+        auto rm = matchAll(s, rFunc);
+        while (!rm.empty)
+        {
+            auto cap = rm.front;
+            rm.popFront();
+            app.put(cap["name"]);
+        }
+
+        return app.data;
     }
 }
 
 // UnittestFunctionFinder
+unittest
+{
+    enum s = "int foo(void) { }
+#ifdef UNITTEST
+        int/* the quick*/__fun42 ( void  )  {  }
+        static // brown fox
+        int  gun() { }
+#endif
+        int bar() { }
+#ifdef UNITTEST
+        /* jumps over */int  
+            hun  
+            (
+             /* the lazy dog */  ){}
+#endif  ";
+
+    auto ff = UnittestFunctionFinder(s, "dummy");
+    assert(ff.names == ["__fun42", "hun"]);
+}
     // getNextBlock
 unittest
 {
@@ -142,3 +176,15 @@ unittest
     assert(ff.getBlocks() == "fun gun");
 }
 
+    // getNames
+unittest
+{
+    enum names = "
+        int  _foo1   (   )    { }
+        static int bar() { }
+        int fun(void  ){}
+        int  hun_3(  void)  { } ";
+
+    UnittestFunctionFinder ff;
+    assert(ff.getNames(names) == ["_foo1", "fun", "hun_3"]);
+}
