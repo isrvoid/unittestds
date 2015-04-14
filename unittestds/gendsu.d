@@ -2,6 +2,7 @@ module unittestds.gendsu;
 
 import std.range;
 import std.file;
+import std.regex;
 
 import util.commentBroom;
 
@@ -16,6 +17,9 @@ void main(string args[])
 }
 
 private:
+
+enum runnerTemplate = import("unittestRunnerTemplate.c");
+
 void writeWarning(string filename, string msg) @safe
 {
     import std.stdio;
@@ -29,7 +33,6 @@ string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 
 struct UnittestFunctionFinder
 {
-    import std.regex;
     import std.range : empty;
 
     private:
@@ -129,6 +132,16 @@ struct UnittestFunctionFinder
     }
 }
 
+string insertPlugin(string tmpl, string plugin) @safe
+{
+    enum r = ctRegex!(".*@unittest_plugin.*");
+    auto cap = matchFirst(tmpl, r);
+    if (cap.empty)
+        throw new NoMatchException("input is missing @unittest_plugin tag");
+
+    return cap.pre ~ plugin ~ cap.post;
+}
+
 // UnittestFunctionFinder
 unittest
 {
@@ -204,4 +217,23 @@ unittest
 
     UnittestFunctionFinder ff;
     assert(ff.getNames(names) == ["_foo1", "fun", "hun_3"]);
+}
+
+// insertPlugin
+unittest
+{
+    enum tmpl = "foo\n // @unittest_plugin don't care\nhun";
+    assert(insertPlugin(tmpl, "fun") == "foo\nfun\nhun");
+}
+
+unittest
+{
+    // exception is thrown if @unittest_plugin is missing
+    bool exceptionCaught;
+    try
+        insertPlugin("input with missing tag", "foo");
+    catch (NoMatchException)
+        exceptionCaught = true;
+
+    assert(exceptionCaught);
 }

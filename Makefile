@@ -1,7 +1,7 @@
 BUILDDIR := build
 
-DFLAGS_T := -unittest
-DFLAGS := -O -release -boundscheck=off
+DFLAGS_T := -unittest -Jsrc
+DFLAGS := -O -release -boundscheck=off -Jsrc
 
 GENDSU_SRC := unittestds/gendsu.d util/commentBroom.d
 
