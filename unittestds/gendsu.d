@@ -7,28 +7,29 @@ module unittestds.gendsu;
 import std.range;
 import std.file;
 import std.regex;
+import std.stdio : writeln;
 
 import util.commentBroom;
 
-void main(string args[])
+int main(string args[])
 {
     // refactor
     string[] paths = args[1 .. $];
+    if (paths.empty)
+    {
+        writeln("gendsu: error: no input files");
+        return -1;
+    }
     string[] contents = new string[paths.length];
     foreach (size_t i, path; paths)
         contents[i] = readText(path);
 
+    return 0;
 }
 
 private:
 
 enum runnerTemplate = import("unittestRunnerTemplate.c");
-
-void writeWarning(string filename, string msg) @safe
-{
-    import std.stdio;
-    writeln(filename, ": warning: ", msg);
-}
 
 string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 {
@@ -37,8 +38,6 @@ string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 
 struct UnittestFunctionFinder
 {
-    import std.range : empty;
-
     private:
 
     string filename;
@@ -66,7 +65,7 @@ struct UnittestFunctionFinder
         lastWarning = null;
         remaining = removeCommentsAndStrings(s);
         if (!lastWarning.empty)
-            writeWarning(filename, lastWarning);
+            writeln(filename, ": warning: ", lastWarning);
 
         auto blocks = getBlocks();
         names = getNames(blocks);
