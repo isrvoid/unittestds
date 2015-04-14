@@ -1,7 +1,9 @@
-module dsunittest.gendsu;
+module unittestds.gendsu;
 
 import std.range;
 import std.file;
+
+import util.commentBroom;
 
 void main(string args[])
 {
@@ -29,7 +31,6 @@ struct UnittestFunctionFinder
 {
     import std.regex;
     import std.range : empty;
-    import util.commentBroom;
 
     private:
 
@@ -148,6 +149,22 @@ unittest
     auto ff = UnittestFunctionFinder(s, "dummy");
     assert(ff.names == ["__fun42", "hun"]);
 }
+
+unittest
+{
+    // UNITTEST block without closing #endif throws exception
+    enum s = "#ifdef UNITTEST
+        // empty
+        ";
+    bool exceptionCaught;
+    try
+        auto ff = UnittestFunctionFinder(s, "dummy");
+    catch (NoMatchException)
+        exceptionCaught = true;
+
+    assert(exceptionCaught);
+}
+
     // getNextBlock
 unittest
 {

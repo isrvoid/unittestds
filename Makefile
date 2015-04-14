@@ -11,7 +11,7 @@ BUILDDIR := build
 DFLAGS_T := -unittest
 DFLAGS := -O -release -boundscheck=off
 
-GENDSU_SRC := dsunittest/gendsu.d util/commentBroom.d
+GENDSU_SRC := unittestds/gendsu.d util/commentBroom.d
 
 default: $(BUILDDIR)/gendsu
 
