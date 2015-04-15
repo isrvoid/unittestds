@@ -44,7 +44,7 @@ int testMultiplyByTwo(void) {
     return 0;
 }
 
-int testMultiplyByFour(void {
+int testMultiplyByFour(void) {
     ASSERT(foo_multiplyByFour(2) == 8);
     ASSERT(foo_multiplyByFour(0) == 0);
     ASSERT(foo_multiplyByFour(-1) == -4);

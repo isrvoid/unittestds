@@ -5,14 +5,14 @@ License:    opensource.org/licenses/MIT
 module unittestds.gendsu;
 
 import std.range : empty;
-import std.array;
+import std.array : Appender;
 import std.file;
 import std.regex;
 import std.stdio : writeln;
 
 import util.commentBroom;
 
-int main(string args[])
+int main(string args[]) @safe
 {
     version (unittest)
         return 0;
@@ -28,6 +28,17 @@ int main(string args[])
     foreach (size_t i, path; paths)
         contents[i] = readText(path);
 
+    PluginMaker pm;
+    foreach (size_t i, path; paths)
+    {
+        auto ff = UnittestFunctionFinder(contents[i], path);
+        pm.putFunc(ff.funcNames, ff.file);
+    }
+    pm.makePlugin();
+
+    auto runner = insertPlugin(runnerTemplate, pm.plugin);
+    write("unittestRunner.c", runner);
+
     return 0;
 }
 
@@ -40,7 +51,7 @@ string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 
 struct UnittestFunctionFinder
 {
-    public string[] funcNames;
+    string[] funcNames;
     string file;
 
     private:
@@ -76,7 +87,7 @@ struct UnittestFunctionFinder
 
     string getBlocks() @safe
     {
-        auto app = appender!string();
+        Appender!string app;
         do
         {
             app.put(getNextBlock(remaining));
@@ -125,7 +136,7 @@ struct UnittestFunctionFinder
             rFunc = ctRegex!(pFunc)
         }
 
-        auto app = appender!(string[])();
+        Appender!(string[]) app;
         auto rm = matchAll(s, rFunc);
         while (!rm.empty)
         {
@@ -339,7 +350,7 @@ unittest
     // putFunc
 unittest
 {
-    auto pm = PluginMaker();
+    PluginMaker pm;
     pm.putFunc(["fooFunc", "barFunc"], "funFile");
     assert(pm.functions.length == 2);
     auto func = pm.functions[1];
