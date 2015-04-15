@@ -5,7 +5,7 @@ License:    opensource.org/licenses/MIT
 module unittestds.gendsu;
 
 import std.range : empty;
-import std.array : appender;
+import std.array;
 import std.file;
 import std.regex;
 import std.stdio : writeln;
@@ -41,7 +41,7 @@ string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 struct UnittestFunctionFinder
 {
     public string[] funcNames;
-    string filename;
+    string file;
 
     private:
 
@@ -61,14 +61,14 @@ struct UnittestFunctionFinder
         @disable this();
     }
 
-    public this(string s, string filename) @safe
+    public this(string s, string file) @safe
     {
-        this.filename = filename;
+        this.file = file;
 
         lastWarning = null;
         remaining = removeCommentsAndStrings(s);
         if (!lastWarning.empty)
-            writeln(filename, ": warning: ", lastWarning);
+            writeln(file, ": warning: ", lastWarning);
 
         auto blocks = getBlocks();
         funcNames = getNames(blocks);
@@ -108,7 +108,7 @@ struct UnittestFunctionFinder
         auto capEnd = matchFirst(remaining, rEnd);
         if (capEnd.empty)
         {
-            throw new NoMatchException(makeMissingBlockTerminatorMsg(filename));
+            throw new NoMatchException(makeMissingBlockTerminatorMsg(file));
         }
         remaining = capEnd.post;
         auto content = capEnd.pre;
@@ -141,18 +141,13 @@ struct UnittestFunctionFinder
 struct PluginMaker
 {
     private:
-    auto funcApp = appender!(Func[])();
-    auto pluginApp = appender!string();
+    Appender!(Func[]) funcApp;
+    Appender!string pluginApp;
 
     struct Func
     {
         string name;
         string file;
-    }
-
-    Func[] functions() pure nothrow @safe
-    {
-        return funcApp.data;
     }
 
     public void putFunc(string[] names, string file) pure nothrow @safe
@@ -161,13 +156,15 @@ struct PluginMaker
             funcApp.put(Func(name, file));
     }
 
-    public string makePlugin()
+    public string makePlugin() pure nothrow @safe
     {
+        pluginApp = pluginApp.init;
+
         putFunctionDeclarations();
         newline();
 
-        pluginApp.put("#define _UNITTEST_COUNT");
-        newline(2);
+        putLine("#define _UNITTEST_COUNT");
+        newline();
 
         putFunctionArray();
 
@@ -179,27 +176,75 @@ struct PluginMaker
         return pluginApp.data;
     }
 
-    void putFunctionDeclarations()
+    void putFunctionDeclarations() pure nothrow @safe
     {
-        // FIXME
+        foreach (func; functions)
+        {
+            pluginApp.put("int ");
+            pluginApp.put(func.name);
+            pluginApp.put("(void);");
+            newline();
+        }
     }
 
-    void putFunctionArray()
+    void putFunctionArray() pure nothrow @safe
     {
-        // FIXME
+        putLine("static const _unittest_functions[] = {");
+
+        putFunctionLiterals();
+        newline();
+
+        putLine("};");
+    }
+
+    void putFunctionLiterals() pure nothrow @safe
+    {
+        enum approxLineWidth = 100;
+        enum syntaxOverheadLength = `{,"()",""},`.length;
+        enum lineIndent = "    ";
+
+        size_t lineLength = lineIndent.length;
+
+        void startNewLine() pure nothrow @safe
+        {
+            newline();
+            pluginApp.put(lineIndent);
+            lineLength = lineIndent.length;
+        }
+
+        pluginApp.put(lineIndent);
+
+        foreach (func; functions)
+        {
+            pluginApp.put("{");
+            pluginApp.put(func.name);
+            pluginApp.put(`,"`);
+            pluginApp.put(func.name);
+            pluginApp.put(`()","`);
+            pluginApp.put(func.file);
+            pluginApp.put(`"},`);
+
+            lineLength += func.name.length * 2 + func.file.length + syntaxOverheadLength;
+            if (lineLength > approxLineWidth)
+                startNewLine();
+        }
+    }
+
+    void putLine(string s) pure nothrow @safe
+    {
+        pluginApp.put(s);
+        newline();
     }
 
     void newline() pure nothrow @safe
     {
-        newline(1);
+        import std.ascii;
+        pluginApp.put(newline);
     }
 
-    void newline(size_t count) pure nothrow @safe
+    Func[] functions() pure nothrow @safe
     {
-        import std.ascii;
-
-        foreach (i; 0 .. count)
-            pluginApp.put(newline);
+        return funcApp.data;
     }
 }
 
