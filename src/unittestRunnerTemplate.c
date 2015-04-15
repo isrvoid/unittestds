@@ -53,6 +53,8 @@ static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]) {
             maxErrorsArg = currentArg + maxErrorsOptionLength;
     }
 
+    r.functions = _unittest_functions;
+    r.functionCount = _UNITTEST_COUNT;
     r.maxErrors = strtoul(maxErrorsArg, NULL, 10);
 
     return r;
@@ -60,7 +62,8 @@ static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]) {
 
 static int _unittest_run(_unittest_run_param_t r) {
     size_t errorCount = 0;
-    for (size_t i = 0; i < r.functionCount; i++) {
+    size_t i = 0;
+    for (; i < r.functionCount; i++) {
         const _unittest_func_t *func = r.functions + i;
 
         int error = func->ptr();

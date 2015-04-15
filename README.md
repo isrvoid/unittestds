@@ -29,7 +29,7 @@ int foo_multiplyByFour(int x) {
     return multiplyByTwo(multiplyByTwo(x));
 }
 
-static int myltiplyByTwo(int x) {
+static int multiplyByTwo(int x) {
     return x + x;
 }
 

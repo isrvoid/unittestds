@@ -169,12 +169,14 @@ struct PluginMaker
 
     public string makePlugin() pure nothrow @safe
     {
+        import std.conv : text;
+
         pluginApp = pluginApp.init;
 
         putFunctionDeclarations();
         newline();
 
-        putLine("#define _UNITTEST_COUNT");
+        putLine(text("#define _UNITTEST_COUNT ", functions.length));
         newline();
 
         putFunctionArray();
@@ -200,7 +202,7 @@ struct PluginMaker
 
     void putFunctionArray() pure nothrow @safe
     {
-        putLine("static const _unittest_functions[] = {");
+        putLine("static const _unittest_func_t _unittest_functions[] = {");
 
         putFunctionLiterals();
         newline();
@@ -249,8 +251,7 @@ struct PluginMaker
 
     void newline() pure nothrow @safe
     {
-        import std.ascii;
-        pluginApp.put(newline);
+        pluginApp.put("\n");
     }
 
     Func[] functions() pure nothrow @safe
