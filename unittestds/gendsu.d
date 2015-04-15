@@ -155,22 +155,51 @@ struct PluginMaker
         return funcApp.data;
     }
 
-    public:
-    void putFunc(string[] names, string file) pure nothrow @safe
+    public void putFunc(string[] names, string file) pure nothrow @safe
     {
         foreach (name; names)
             funcApp.put(Func(name, file));
     }
 
-    string makePlugin()
+    public string makePlugin()
     {
-        // FIXME
+        putFunctionDeclarations();
+        newline();
+
+        pluginApp.put("#define _UNITTEST_COUNT");
+        newline(2);
+
+        putFunctionArray();
+
         return plugin;
     }
 
-    string plugin() pure nothrow @safe
+    public string plugin() pure nothrow @safe
     {
         return pluginApp.data;
+    }
+
+    void putFunctionDeclarations()
+    {
+        // FIXME
+    }
+
+    void putFunctionArray()
+    {
+        // FIXME
+    }
+
+    void newline() pure nothrow @safe
+    {
+        newline(1);
+    }
+
+    void newline(size_t count) pure nothrow @safe
+    {
+        import std.ascii;
+
+        foreach (i; 0 .. count)
+            pluginApp.put(newline);
     }
 }
 
