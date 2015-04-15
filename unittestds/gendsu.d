@@ -4,7 +4,8 @@ License:    opensource.org/licenses/MIT
 */
 module unittestds.gendsu;
 
-import std.range;
+import std.range : empty;
+import std.array : appender;
 import std.file;
 import std.regex;
 import std.stdio : writeln;
@@ -13,6 +14,9 @@ import util.commentBroom;
 
 int main(string args[])
 {
+    version (unittest)
+        return 0;
+
     // refactor
     string[] paths = args[1 .. $];
     if (paths.empty)
@@ -27,8 +31,6 @@ int main(string args[])
     return 0;
 }
 
-private:
-
 enum runnerTemplate = import("unittestRunnerTemplate.c");
 
 string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
@@ -38,13 +40,14 @@ string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
 
 struct UnittestFunctionFinder
 {
+    public string[] funcNames;
+    string filename;
+
     private:
 
-    string filename;
     bool blockNotFound;
     string remaining;
 
-    public string[] names;
 
     version (unittest)
     {
@@ -68,7 +71,7 @@ struct UnittestFunctionFinder
             writeln(filename, ": warning: ", lastWarning);
 
         auto blocks = getBlocks();
-        names = getNames(blocks);
+        funcNames = getNames(blocks);
     }
 
     string getBlocks() @safe
@@ -135,6 +138,42 @@ struct UnittestFunctionFinder
     }
 }
 
+struct PluginMaker
+{
+    private:
+    auto funcApp = appender!(Func[])();
+    auto pluginApp = appender!string();
+
+    struct Func
+    {
+        string name;
+        string file;
+    }
+
+    Func[] functions() pure nothrow @safe
+    {
+        return funcApp.data;
+    }
+
+    public:
+    void putFunc(string[] names, string file) pure nothrow @safe
+    {
+        foreach (name; names)
+            funcApp.put(Func(name, file));
+    }
+
+    string makePlugin()
+    {
+        // FIXME
+        return plugin;
+    }
+
+    string plugin() pure nothrow @safe
+    {
+        return pluginApp.data;
+    }
+}
+
 string insertPlugin(string tmpl, string plugin) @safe
 {
     enum r = ctRegex!(".*@unittest_plugin.*");
@@ -163,7 +202,7 @@ unittest
 #endif  ";
 
     auto ff = UnittestFunctionFinder(s, "dummy");
-    assert(ff.names == ["__fun42", "hun"]);
+    assert(ff.funcNames == ["__fun42", "hun"]);
 }
 
 unittest
@@ -220,6 +259,18 @@ unittest
 
     UnittestFunctionFinder ff;
     assert(ff.getNames(names) == ["_foo1", "fun", "hun_3"]);
+}
+
+// PluginMaker
+    // putFunc
+unittest
+{
+    auto pm = PluginMaker();
+    pm.putFunc(["fooFunc", "barFunc"], "funFile");
+    assert(pm.functions.length == 2);
+    auto func = pm.functions[1];
+    assert(func.name == "barFunc");
+    assert(func.file == "funFile");
 }
 
 // insertPlugin
