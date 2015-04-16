@@ -6,14 +6,16 @@ module unittestds.gendsu;
 
 import std.range : empty;
 import std.array : Appender;
-import std.file;
 import std.regex;
 import std.stdio : writeln;
 
 import util.commentBroom;
 
-int main(string args[]) @safe
+int main(string args[]) @trusted
 {
+    import std.file : read, write;
+    import std.encoding : sanitize;
+
     version (unittest)
         return 0;
 
@@ -26,7 +28,7 @@ int main(string args[]) @safe
     }
     string[] contents = new string[paths.length];
     foreach (size_t i, path; paths)
-        contents[i] = readText(path);
+        contents[i] = sanitize(cast(string) read(path));
 
     PluginMaker pm;
     foreach (size_t i, path; paths)
