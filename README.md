@@ -1,5 +1,4 @@
 ## D style unit tests in C
-
 Any "int foo(void)" function within UNITTEST block will be recognized as unit test.
 Declaration should be omitted. A test fails if it returns non 0.
 Helper macros reduce the amount of return statements to a single return 0; at the end.
@@ -85,5 +84,29 @@ Unittests are guarded with preprocessor conditional
 ```C
 #ifdef UNITTEST
 ```
-Thats the reason we passed -DUNITTEST to the compiler previously.
-UNITTEST must be defined somewhere, so that unittest functions are compiled as well.
+Thats the reason we've passed -DUNITTEST to the compiler previously.
+UNITTEST has to be defined somewhere, so that unittest functions are compiled as well.
+
+#### Notes
+Requiring #endif as exclusive terminator of a UNITTEST block is a conscious choice.
+Allowing #elif and #else as additional terminators could leave room for ambiguity,
+where unittests end. #ifdef UNITTEST and #endif should rather be seen as borrowed
+keywords. They serve as a switch for ignoring unittest functions in a release build
+and spare artificial tags like
+```C
+// @unittest
+...
+// @unittest_end
+```
+Nesting of additional precompiler conditionals within a UNITTEST block is allowed.
+However, they can't prevent a function from being added to the unittest runner - 
+all functions with eligible signature are added.
+
+Those choices are tiled towards simplicity, parsing speed
+and avoidance of superfluous checks that are covered by the compiler.
+If gendsu produces incorrect output, the source couldn't have been compiled anyway.
+
+##### TODO
+- run tests in multiple threads
+- traversal of preprocessor conditionals withing UNITTEST block
+- output line number of failed test to allow for automatic jumping to it
