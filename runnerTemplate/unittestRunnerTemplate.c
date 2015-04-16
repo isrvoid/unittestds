@@ -27,8 +27,7 @@ typedef struct {
 static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]);
 static int _unittest_run(_unittest_run_param_t r);
 
-// dsunittest utility inserts generated code at following line
-// @unittest_plugin
+// @unittest_plugin - gendsu inserts generated code at this line
 
 int main(int argc, char *argv[]) {
     _unittest_run_param_t r = _unittest_makeRunParam(argc, argv);

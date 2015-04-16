@@ -207,12 +207,12 @@ struct PluginMaker
         putFunctionLiterals();
         newline();
 
-        putLine("};");
+        pluginApp.put("};");
     }
 
     void putFunctionLiterals() pure nothrow @safe
     {
-        enum approxLineWidth = 100;
+        enum softLineWidth = 100;
         enum syntaxOverheadLength = `{,"()",""},`.length;
         enum lineIndent = "    ";
 
@@ -229,6 +229,9 @@ struct PluginMaker
 
         foreach (func; functions)
         {
+            if (lineLength > softLineWidth)
+                startNewLine();
+
             pluginApp.put("{");
             pluginApp.put(func.name);
             pluginApp.put(`,"`);
@@ -238,8 +241,6 @@ struct PluginMaker
             pluginApp.put(`"},`);
 
             lineLength += func.name.length * 2 + func.file.length + syntaxOverheadLength;
-            if (lineLength > approxLineWidth)
-                startNewLine();
         }
     }
 
