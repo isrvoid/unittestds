@@ -72,7 +72,7 @@ struct ArgumentParser
             errors ~= "no input files";
     }
 
-    string[] files() pure nothrow @property @safe
+    @property string[] files() pure nothrow @safe
     {
         return fileApp.data;
     }
@@ -104,11 +104,6 @@ struct ArgumentParser
 
 enum runnerTemplate = import("unittestRunnerTemplate.c");
 
-string makeMissingBlockTerminatorMsg(string filename) pure nothrow @safe
-{
-    return filename ~ ": error: UNITTEST block is missing #endif";
-}
-
 struct UnittestFunctionFinder
 {
     string[] funcNames;
@@ -117,14 +112,14 @@ struct UnittestFunctionFinder
     private:
 
     bool blockNotFound;
-    string remaining;
+    string loaf;
 
 
     version (unittest)
     {
         public this(string s)
         {
-            remaining = s;
+            loaf = s;
         }
     }
     else
@@ -137,7 +132,7 @@ struct UnittestFunctionFinder
         this.file = file;
 
         lastWarning = null;
-        remaining = removeCommentsAndStrings(s);
+        loaf = removeCommentsAndStrings(s);
         if (!lastWarning.empty)
             writeln(file, ": warning: ", lastWarning);
 
@@ -150,42 +145,48 @@ struct UnittestFunctionFinder
         Appender!string app;
         do
         {
-            app.put(getNextBlock(remaining));
+            app.put(getNextBlock(loaf));
         }
         while (!blockNotFound);
 
         return app.data;
     }
 
-    string getNextBlock(ref string s) @safe
+    string getNextBlock(ref string s) @trusted
     {
-        enum
-        {
-            pStart = r"#\s*if(?:def|\s+defined)\s+UNITTEST",
-            pEnd = r"#\s*endif",
-            rStart = ctRegex!(pStart),
-            rEnd = ctRegex!(pEnd)
-        }
+        enum rStart = ctRegex!(r"#\s*if(?:def|\s+defined)\s+UNITTEST");
+        enum rPushPop = ctRegex!(r"#\s*(?:(if)|(endif))");
+        enum popIndex = 2;
 
-        auto capStart = matchFirst(s, rStart);
-        if (capStart.empty)
+        auto cap = matchFirst(s, rStart);
+        if (cap.empty)
         {
             blockNotFound = true;
             return null;
         }
-        auto remaining = capStart.post;
 
-        // FIXME traverse nested preprocessor conditionals
-        auto capEnd = matchFirst(remaining, rEnd);
-        if (capEnd.empty)
+        auto loaf = cap.post;
+        auto contentStart = loaf.ptr;
+
+        size_t stack = 1;
+        while (stack)
         {
-            throw new NoMatchException(makeMissingBlockTerminatorMsg(file));
-        }
-        remaining = capEnd.post;
-        auto content = capEnd.pre;
+            cap = matchFirst(loaf, rPushPop);
+            if (cap.empty)
+                throw new NoMatchException(file ~ ": error: UNITTEST block is missing #endif");
 
-        s = remaining;
-        return content;
+            loaf = cap.post;
+
+            if (!cap[popIndex].empty)
+                --stack;
+            else // push
+                ++stack;
+        }
+
+        auto contentLength = cap.hit.ptr - contentStart;
+
+        s = loaf;
+        return contentStart[0 .. contentLength];
     }
 
     string[] getNames(string s) @safe
@@ -429,6 +430,8 @@ unittest
 }
 
     // getNextBlock
+    // assumes that comments and strings were removed
+    // i.e. the input doesn't contain "#ifdef" or /* #ifdef */
 unittest
 {
     // there is no point in ensuring certain whitespaces
@@ -446,6 +449,41 @@ unittest
     assert(ff.getNextBlock(notABlock) == null);
     assert(ff.blockNotFound);
     assert(notABlock == "foo bar");
+}
+
+unittest
+{
+    auto missingEndif = "#ifdef UNITTEST\n#  ifdef FOO\n#endif";
+    UnittestFunctionFinder ff;
+    bool exceptionCaught;
+    try
+        ff.getNextBlock(missingEndif);
+    catch (NoMatchException)
+        exceptionCaught = true;
+
+    assert(exceptionCaught);
+}
+
+unittest
+{
+    auto emptyContent = "# if  defined   UNITTEST#  endiffun";
+    UnittestFunctionFinder ff;
+    assert(ff.getNextBlock(emptyContent).empty);
+    assert(emptyContent == "fun");
+}
+
+unittest
+{
+    enum start = "#   ifdef  UNITTEST";
+    enum end = "#   endif";
+    enum post = "\nfoo bar";
+    enum content = "\n the\n # if  defined FOO\n quick\n#if FUN\n brown\n #endif\n\n #else  \n
+        fox\n\n  #if BAR\n jumps\n #  elif\n over\n # else\n the\n #endif\n lazy\n #endif\n dog\n ";
+    auto loaf = start ~ content ~ end ~ post;
+
+    UnittestFunctionFinder ff;
+    assert(ff.getNextBlock(loaf) == content);
+    assert(loaf == post);
 }
 
     // getBlocks

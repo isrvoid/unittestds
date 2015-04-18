@@ -53,7 +53,8 @@ int testMultiplyByFour(void) {
 #endif
 ```
 Tests don't necessarily have to be in the same file as implementation
-(loosing access to static members and functions).
+(loosing access to static members and functions). There can by any number of
+UNITTEST regions scattered through a source file.
 
 #### Installation
 D compiler is required.
@@ -107,6 +108,5 @@ and avoidance of superfluous checks that are covered by the compiler.
 If gendsu produces incorrect output, the source couldn't have been compiled anyway.
 
 ##### TODO
-- run tests in multiple threads
-- traversal of preprocessor conditionals withing UNITTEST block
 - output line number of failed test to allow for automatic jumping to it
+- run tests in multiple threads
