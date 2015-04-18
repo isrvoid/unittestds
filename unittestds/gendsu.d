@@ -11,7 +11,7 @@ import std.stdio : writeln;
 
 import util.commentBroom;
 
-int main(string args[]) @trusted
+int main(string args[])
 {
     import std.file : read, write;
     import std.encoding : sanitize;
@@ -19,29 +19,87 @@ int main(string args[]) @trusted
     version (unittest)
         return 0;
 
-    // refactor
-    string[] paths = args[1 .. $];
-    if (paths.empty)
+    auto parsedArgs = ArgumentParser(args[1 .. $]);
+    if (!parsedArgs.errors.empty)
     {
-        writeln("gendsu: error: no input files");
+        foreach (error; parsedArgs.errors)
+            writeln("gendsu: error: ", error);
+
         return -1;
     }
-    string[] contents = new string[paths.length];
-    foreach (size_t i, path; paths)
-        contents[i] = sanitize(cast(string) read(path));
+
+    string[] contents = new string[parsedArgs.files.length];
+    foreach (size_t i, file; parsedArgs.files)
+        contents[i] = sanitize(cast(string) read(file));
 
     PluginMaker pm;
-    foreach (size_t i, path; paths)
+    foreach (size_t i, file; parsedArgs.files)
     {
-        auto ff = UnittestFunctionFinder(contents[i], path);
+        auto ff = UnittestFunctionFinder(contents[i], file);
         pm.putFunc(ff.funcNames, ff.file);
     }
     pm.makePlugin();
 
     auto runner = insertPlugin(runnerTemplate, pm.plugin);
-    write("unittestRunner.c", runner);
+    write(parsedArgs.outputFile, runner);
 
     return 0;
+}
+
+struct ArgumentParser
+{
+    private Appender!(string[]) fileApp;
+    private enum outputFileSwitch = "-of";
+
+    string[] errors;
+
+    string outputFile = "unittestRunner.c";
+
+    @disable this();
+
+    this(string[] args) pure nothrow @safe
+    {
+        foreach (arg; args)
+        {
+            bool isFile = (arg[0] != '-');
+            if (isFile)
+                fileApp.put(arg);
+            else
+                handleSwitch(arg);
+        }
+
+        if (files.empty)
+            errors ~= "no input files";
+    }
+
+    string[] files() pure nothrow @property @safe
+    {
+        return fileApp.data;
+    }
+
+    private:
+
+    void handleSwitch(string arg) pure nothrow @safe
+    {
+        import std.algorithm : startsWith;
+
+        if (arg.startsWith(outputFileSwitch))
+            handleOutputFileSwitch(arg);
+        else
+            errors ~= "unrecognized switch '" ~ arg ~ "'";
+    }
+
+    void handleOutputFileSwitch(string arg) pure nothrow @safe
+    {
+        auto outputFile = arg[outputFileSwitch.length .. $];
+        if (outputFile.empty)
+        {
+            errors ~= "argument expected for switch '" ~ outputFileSwitch ~ "'";
+            return;
+        }
+
+        this.outputFile = outputFile;
+    }
 }
 
 enum runnerTemplate = import("unittestRunnerTemplate.c");
@@ -271,6 +329,67 @@ string insertPlugin(string tmpl, string plugin) @safe
         throw new NoMatchException("input is missing @unittest_plugin tag");
 
     return cap.pre ~ plugin ~ cap.post;
+}
+
+// ArgumentParser
+unittest
+{
+    auto args = ["foo", "bar"];
+    auto ap = ArgumentParser(args);
+    assert(ap.errors.empty);
+    assert(ap.files == args);
+    assert(ap.outputFile == "unittestRunner.c");
+}
+
+unittest
+{
+    auto ap = ArgumentParser(["foo", "-offun.c", "bar"]);
+    assert(ap.errors.empty);
+    assert(ap.files == ["foo", "bar"]);
+    assert(ap.outputFile == "fun.c");
+}
+
+unittest
+{
+    // no input files
+    auto ap = ArgumentParser(null);
+    assert(ap.errors.length == 1);
+    assert(ap.errors[0] == "no input files");
+}
+
+version (unittest)
+{
+    bool checkUnknownSwitchError(string error, string us)
+    {
+        return error == "unrecognized switch '" ~ us ~ "'";
+    }
+}
+
+unittest
+{
+    // unknown switch
+    auto ap = ArgumentParser(["-hithere", "foo"]);
+    assert(ap.errors.length == 1);
+    assert(checkUnknownSwitchError(ap.errors[0], "-hithere"));
+}
+
+unittest
+{
+    // no input files and unknown switches
+    auto ap = ArgumentParser(["-theQuick", "-brownFox"]);
+    assert(ap.errors.length == 3);
+    assert(checkUnknownSwitchError(ap.errors[0], "-theQuick"));
+    assert(checkUnknownSwitchError(ap.errors[1], "-brownFox"));
+    assert(ap.errors[2] == "no input files");
+}
+
+unittest
+{
+    // missing switch argument
+    auto ap = ArgumentParser(["foo", "-of"]);
+    assert(ap.errors.length == 1);
+    assert(ap.errors[0] == "argument expected for switch '-of'");
+    assert(ap.outputFile == "unittestRunner.c");
 }
 
 // UnittestFunctionFinder
