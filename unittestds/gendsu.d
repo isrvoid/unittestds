@@ -14,7 +14,6 @@ import util.commentBroom;
 int main(string args[])
 {
     import std.file : read, write;
-    import std.encoding : sanitize;
 
     version (unittest)
         return 0;
@@ -30,7 +29,7 @@ int main(string args[])
 
     string[] contents = new string[parsedArgs.files.length];
     foreach (size_t i, file; parsedArgs.files)
-        contents[i] = sanitize(cast(string) read(file));
+        contents[i] = cast(string) read(file);
 
     PluginMaker pm;
     foreach (size_t i, file; parsedArgs.files)
