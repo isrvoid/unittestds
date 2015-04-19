@@ -1,24 +1,28 @@
 ## D style unit tests in C
-Any "int foo(void)" function within UNITTEST block will be recognized as unit test.
-Declaration should be omitted. A test fails if it returns non 0.
-Helper macros reduce the amount of return statements to a single return 0; at the end.
+`void` functions returning `int` within `UNITTEST` conditional will be recognized as unittest.
+Test fails if it returns non `0`. Helper macros reduce the amount of return statements
+to a single `return 0;` at the end.
 ```C
 #ifdef UNITTEST
-#include "unittestMacros.h"
+int tryFooInitWithValidArgument(void) {
+    ASSERT(!foo_init(42));
+    return 0;
+}
 
-int bar(void) {
-    ASSERT(1);
+int fooInitShouldFailOnLTZero() {
+    ASSERT(foo_init(-1));
     return 0;
 }
 #endif
 ```
-The generator utility will add these to test runner.
-Static functions with same signature are ignored.
+Declarations should be omitted - they are added to the unittest runner automatically.
+Static functions are ignored.
 
 Please bare with contrived multiply functions in the following example.
-Its purpouse is to show simplicity of adding unit tests to your C code.
+Its purpouse is to show simplicity of adding unittests to your C code.
 ```C
 #include "foo.h"
+#include "unittestMacros.h"
 
 // private helper
 static int multiplyByTwo(int x);
@@ -33,8 +37,6 @@ static int multiplyByTwo(int x) {
 }
 
 #ifdef UNITTEST
-#include "unittestMacros.h"
-
 int testMultiplyByTwo(void) {
     // not even static functions are safe from being tested
     ASSERT(multiplyByTwo(2) == 4);
@@ -49,12 +51,11 @@ int testMultiplyByFour(void) {
     ASSERT(foo_multiplyByFour(-1) == -4);
     return 0;
 }
-
 #endif
 ```
 Tests don't necessarily have to be in the same file as implementation
-(loosing access to static members and functions). There can by any number of
-UNITTEST regions scattered through a source file.
+(loosing access to static members and functions).
+There can by any number of UNITTEST regions scattered through a source file.
 
 #### Installation
 D compiler is required.
@@ -74,8 +75,8 @@ Call gendsu giving it files containing unittests.
 ```bash
 gendsu src/foo.c src/bar.c
 ```
-A single unittestRunner.c will be generated. It must to be compiled and linked
-with other source files previously passed to gendsu.
+A single `unittestRunner.c` will be generated (name can be set with `-offilename`).
+It must to be compiled and linked with other source files previously passed to gendsu.
 ```bash
 cc src/foo.c src/bar.c unittestRunner.c -DUNITTEST -o unittestRunner
 ```
