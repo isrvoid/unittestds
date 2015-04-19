@@ -80,19 +80,13 @@ It must to be compiled and linked with other source files previously passed to g
 ```bash
 cc src/foo.c src/bar.c unittestRunner.c -DUNITTEST -o unittestRunner
 ```
-If this succeeds, you can run the unittests by calling the newly created unittestRunner.
-
-Unittests are guarded with preprocessor conditional
-```C
-#ifdef UNITTEST
-```
-Thats the reason we've passed -DUNITTEST to the compiler previously.
-UNITTEST has to be defined somewhere, so that unittest functions are compiled as well.
+`UNITTEST` has to be defined to compile functions within `#ifdef UNITTEST` conditional.
+If `cc` succeeds, you can run the tests by executing the newly created `unittestRunner`.
 
 #### Notes
-Requiring #endif as exclusive terminator of a UNITTEST block is a conscious choice.
-Allowing #elif and #else as additional terminators could leave room for ambiguity,
-where unittests end. #ifdef UNITTEST and #endif should rather be seen as borrowed
+Requiring `#endif` as exclusive terminator of a `UNITTEST` block is a conscious choice.
+Allowing `#elif` and `#else` as additional terminators could leave room for ambiguity,
+where unittests end. `#ifdef UNITTEST` and `#endif` should rather be seen as borrowed
 keywords. They serve as a switch for ignoring unittest functions in a release build
 and spare artificial tags like
 ```C
@@ -100,7 +94,7 @@ and spare artificial tags like
 ...
 // @unittest_end
 ```
-Nesting of additional precompiler conditionals within a UNITTEST block is allowed.
+Nesting of additional precompiler conditionals within a `UNITTEST` block is allowed.
 However, they can't prevent a function from being added to the unittest runner - 
 all functions with eligible signature are added.
 
