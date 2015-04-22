@@ -77,6 +77,8 @@ gendsu src/foo.c src/bar.c
 ```
 A single `unittestRunner.c` will be generated (name can be set with `-offilename`).
 It must to be compiled and linked with other source files previously passed to gendsu.
+If your project has a `main()`, it should be enclosed in `#ifndef UNITTEST` - `#endif`.
+Unittest runner has its own `main()` function.
 ```bash
 cc src/foo.c src/bar.c unittestRunner.c -DUNITTEST -o unittestRunner
 ```
