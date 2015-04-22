@@ -89,6 +89,7 @@ string findNextStart(string loaf)
             if (loaf[0] == '"')
                 return loaf[0 .. 1];
 
+            // loaf[0] == '/'
             if (loaf.length >= 2 && (loaf[1] == '/' || loaf[1] == '*'))
                 return loaf[0 .. 2];
 
@@ -112,16 +113,6 @@ string getReplacement(string strReplacement)(string matchedStart)
         return strReplacement;
 
     assert(0);
-}
-
-string getPost(RegEx)(string s, RegEx postRegex) @safe
-if (is(RegEx == Regex!char) || is(RegEx == StaticRegex!char))
-{
-    auto cap = matchFirst(s, postRegex);
-    if (cap.empty)
-        throw new NoMatchException(null);
-
-    return cap.post;
 }
 
 string function(string) getPostFunction(string matchedStart) pure nothrow @safe
@@ -152,7 +143,7 @@ string postLineComment(string s) @trusted
         return (hit.ptr - 1)[0 .. hit.length + 1];
 }
 
-string postBlockComment(string s)
+string postBlockComment(string s) @safe
 {
     auto hit = s.find("*/");
     if (hit.empty)
@@ -161,7 +152,7 @@ string postBlockComment(string s)
     return hit[2 .. $];
 }
 
-string postString(string s) @trusted
+string postString(string s) @safe
 {
     auto loaf = s;
     while (true)
@@ -170,7 +161,6 @@ string postString(string s) @trusted
         if (hit.empty)
             throw new NoMatchException(null);
 
-        bool isQmPrecededByBackslash = hit.ptr > s.ptr && hit.ptr[-1] == '\\';
         if (getPrecedingBackslashCount(loaf, hit.ptr) % 2 == 0)
             return hit[1 .. $];
         else
