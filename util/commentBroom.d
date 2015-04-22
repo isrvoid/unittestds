@@ -17,32 +17,9 @@ class NoMatchException : Exception
 }
 
 private:
-
-enum
-{
-    lineCommentStart = "//",
-    pLineCommentStart = lineCommentStart,
-    pLineCommentEnd = r"(?=\n|\r\n)", // let's deprecate single CR as line terminator
-
-    blockCommentStart = "/*",
-    pBlockCommentStart = r"/\*",
-    pBlockCommentEnd = r"\*/",
-
-    stringStart = `"`,
-    pStringStart = stringStart,
-    pStringEnd = `(?<!\\)(?:\\\\)*"`,
-
-    pSomeStart = pLineCommentStart ~ "|" ~ pBlockCommentStart ~ "|" ~ pStringStart
-}
-
-enum
-{
-    rSomeStart = ctRegex!(pSomeStart),
-
-    rLineCommentEnd = ctRegex!(pLineCommentEnd),
-    rBlockCommentEnd = ctRegex!(pBlockCommentEnd),
-    rStringEnd = ctRegex!(pStringEnd)
-}
+enum lineCommentStart = "//";
+enum blockCommentStart = "/*";
+enum stringStart = `"`;
 
 enum missingTerminatorWarnings = [lineCommentStart:"missing line terminator",
                                blockCommentStart:"unterminated block comment",
@@ -55,40 +32,72 @@ Block comments are replaced with a space.
 Strings are replaced with given argument.
 For simplicity, also removes unterminated block comment or string
 at the end of the input (printing a warning).  */
-public string removeCommentsAndStrings(string strReplacement = " s ")(string s) @safe
+public string removeCommentsAndStrings(string strReplacement = " s ")(string s) @trusted
 {
-    import std.array : appender;
-    auto app = appender!string();
+    import std.array : Appender;
+    Appender!string app;
     app.reserve(s.length);
 
-    auto remaining = s;
+    auto loaf = s;
 
     while (true)
     {
-        auto cap = matchFirst(remaining, rSomeStart);
-        if (cap.empty)
+        auto start = loaf.findNextStart();
+        if (start.empty)
         {
-            app.put(remaining);
+            app.put(loaf);
             return app.data;
         }
 
-        app.put(cap.pre);
-        remaining = cap.post;
+        auto preStart = loaf[0 .. start.ptr - loaf.ptr];
+        app.put(preStart);
 
-        app.put(getReplacement!strReplacement(cap.hit));
+        auto postStart = loaf[start.ptr - loaf.ptr + start.length .. $];
+        loaf = postStart;
+
+        app.put(getReplacement!strReplacement(start));
 
         try
         {
-            remaining = remaining.getPost(getEndRegex(cap.hit));
+            loaf = getPostFunction(start)(loaf);
         }
         catch (NoMatchException)
         {
-            lastWarning = missingTerminatorWarnings[cap.hit];
-            remaining = remaining.getLineTerminatorAtBack();
+            lastWarning = missingTerminatorWarnings[start];
+            loaf = loaf.getLineTerminatorAtBack();
         }
     }
 
     return app.data;
+}
+
+static immutable bool[0x100] isCharOfInterest;
+static this()
+{
+    isCharOfInterest[cast(size_t) '/'] = true;
+    isCharOfInterest[cast(size_t) '"'] = true;
+}
+
+string findNextStart(string loaf)
+{
+    size_t i;
+    while (i < loaf.length)
+    {
+        if (isCharOfInterest[cast(size_t) loaf[i]])
+        {
+            loaf = loaf[i .. $];
+            if (loaf[0] == '"')
+                return loaf[0 .. 1];
+
+            if (loaf.length >= 2 && (loaf[1] == '/' || loaf[1] == '*'))
+                return loaf[0 .. 2];
+
+            i = 0;
+        }
+        i++;
+    }
+
+    return null;
 }
 
 string getReplacement(string strReplacement)(string matchedStart)
@@ -115,18 +124,67 @@ if (is(RegEx == Regex!char) || is(RegEx == StaticRegex!char))
     return cap.post;
 }
 
-StaticRegex!char getEndRegex(string matchedStart) pure nothrow @safe
+string function(string) getPostFunction(string matchedStart) pure nothrow @safe
 {
     if (matchedStart == lineCommentStart)
-        return rLineCommentEnd;
+        return &postLineComment;
 
     if (matchedStart == blockCommentStart)
-        return rBlockCommentEnd;
+        return &postBlockComment;
 
     if (matchedStart == stringStart)
-        return rStringEnd;
+        return &postString;
 
     assert(0);
+}
+
+// single CR as line terminator is not supported
+string postLineComment(string s) @trusted
+{
+    auto hit = s.find('\n');
+    if (hit.empty)
+        throw new NoMatchException(null);
+
+    bool isLfPrecededByCr = hit.ptr > s.ptr && hit.ptr[-1] == '\r';
+    if (!isLfPrecededByCr)
+        return hit;
+    else
+        return (hit.ptr - 1)[0 .. hit.length + 1];
+}
+
+string postBlockComment(string s)
+{
+    auto hit = s.find("*/");
+    if (hit.empty)
+        throw new NoMatchException(null);
+
+    return hit[2 .. $];
+}
+
+string postString(string s) @trusted
+{
+    auto loaf = s;
+    while (true)
+    {
+        auto hit = loaf.find('"');
+        if (hit.empty)
+            throw new NoMatchException(null);
+
+        bool isQmPrecededByBackslash = hit.ptr > s.ptr && hit.ptr[-1] == '\\';
+        if (getPrecedingBackslashCount(loaf, hit.ptr) % 2 == 0)
+            return hit[1 .. $];
+        else
+            loaf = hit[1 .. $];
+    }
+}
+
+auto getPrecedingBackslashCount(string s, immutable(char)* cp) pure nothrow @trusted
+{
+    size_t count = 0;
+    while (s.ptr < cp && *(--cp) == '\\')
+        ++count;
+
+    return count;
 }
 
 string getLineTerminatorAtBack(string s) pure nothrow @safe
@@ -163,7 +221,7 @@ version (unittest)
 unittest
 {
     foreach (filename; getTestInputFilenames()) {
-        auto input = readText(filename);
+        auto input = cast(string) read(filename);
         auto expectedOutput = readText(filename ~ verifyExtension);
         assert(input.removeCommentsAndStrings!" "() == expectedOutput, filename);
     }
