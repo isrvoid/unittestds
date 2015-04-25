@@ -22,15 +22,15 @@ typedef struct {
     const _unittest_func_t *functions;
     size_t functionCount;
     size_t maxErrors;
-} _unittest_run_param_t;
+} _unittest_run_t;
 
-static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]);
-static int _unittest_run(_unittest_run_param_t r);
+static _unittest_run_t _unittest_makeRunArg(int argc, char *argv[]);
+static int _unittest_run(_unittest_run_t r);
 
 // @unittest_plugin - gendsu inserts generated code at this line
 
 int main(int argc, char *argv[]) {
-    _unittest_run_param_t r = _unittest_makeRunParam(argc, argv);
+    _unittest_run_t r = _unittest_makeRunArg(argc, argv);
     int error = _unittest_run(r);
     if (!error)
         printf("%u succeeded\n", _UNITTEST_COUNT);
@@ -38,18 +38,17 @@ int main(int argc, char *argv[]) {
     return error;
 }
 
-static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]) {
-    _unittest_run_param_t r = { 0 };
+static _unittest_run_t _unittest_makeRunArg(int argc, char *argv[]) {
+    _unittest_run_t r = { NULL, 0, 0 };
     const char *maxErrorsArg = getenv("UNITTEST_MAX_ERRORS");
     if (!maxErrorsArg)
         maxErrorsArg = "";
 
     if (argc > 1) {
         const char *maxErrorsOption = "-max_errors=";
-        size_t maxErrorsOptionLength = strlen(maxErrorsOption);
         const char *currentArg = argv[1];
-        if (strncmp(currentArg, maxErrorsOption, maxErrorsOptionLength) == 0)
-            maxErrorsArg = currentArg + maxErrorsOptionLength;
+        if (strcmp(currentArg, maxErrorsOption) == 0)
+            maxErrorsArg = currentArg + strlen(maxErrorsOption);
     }
 
     r.functions = _unittest_functions;
@@ -59,7 +58,7 @@ static _unittest_run_param_t _unittest_makeRunParam(int argc, char *argv[]) {
     return r;
 }
 
-static int _unittest_run(_unittest_run_param_t r) {
+static int _unittest_run(_unittest_run_t r) {
     size_t errorCount = 0;
     size_t i = 0;
     for (; i < r.functionCount; i++) {
