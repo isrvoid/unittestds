@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     _unittest_run_t r = _unittest_makeRunArg(argc, argv);
     int error = _unittest_run(r);
     if (!error)
-        printf("%u succeeded\n", _UNITTEST_COUNT);
+        printf("%lu succeeded\n", (unsigned long) r.functionCount);
 
     return error;
 }
@@ -52,7 +52,7 @@ static _unittest_run_t _unittest_makeRunArg(int argc, char *argv[]) {
     }
 
     r.functions = _unittest_functions;
-    r.functionCount = _UNITTEST_COUNT;
+    r.functionCount = sizeof(_unittest_functions) / sizeof(_unittest_func_t);
     r.maxErrors = strtoul(maxErrorsArg, NULL, 10);
 
     return r;

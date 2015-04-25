@@ -28,11 +28,11 @@ int main(string args[])
     }
 
     string[] contents = new string[parsedArgs.files.length];
-    foreach (size_t i, file; parsedArgs.files)
+    foreach (i, file; parsedArgs.files)
         contents[i] = cast(string) read(file);
 
     PluginMaker pm;
-    foreach (size_t i, file; parsedArgs.files)
+    foreach (i, file; parsedArgs.files)
     {
         auto ff = UnittestFunctionFinder(contents[i], file);
         pm.putFunc(ff.funcNames, ff.file);
@@ -236,9 +236,6 @@ struct PluginMaker
         putFunctionDeclarations();
         newline();
 
-        putLine(text("#define _UNITTEST_COUNT ", functions.length));
-        newline();
-
         putFunctionArray();
 
         return plugin;
@@ -276,7 +273,7 @@ struct PluginMaker
         enum syntaxOverheadLength = `{,"()",""},`.length;
         enum lineIndent = "    ";
 
-        size_t lineLength = lineIndent.length;
+        auto lineLength = lineIndent.length;
 
         void startNewLine() pure nothrow @safe
         {
