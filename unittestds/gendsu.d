@@ -229,8 +229,6 @@ struct PluginMaker
 
     public string makePlugin() pure nothrow @safe
     {
-        import std.conv : text;
-
         pluginApp = pluginApp.init;
 
         putFunctionDeclarations();
@@ -262,42 +260,23 @@ struct PluginMaker
         putLine("static const _unittest_func_t _unittest_functions[] = {");
 
         putFunctionLiterals();
-        newline();
 
         pluginApp.put("};");
     }
 
     void putFunctionLiterals() pure nothrow @safe
     {
-        enum softLineWidth = 100;
-        enum syntaxOverheadLength = `{,"()",""},`.length;
-        enum lineIndent = "    ";
-
-        auto lineLength = lineIndent.length;
-
-        void startNewLine() pure nothrow @safe
-        {
-            newline();
-            pluginApp.put(lineIndent);
-            lineLength = lineIndent.length;
-        }
-
-        pluginApp.put(lineIndent);
-
         foreach (func; functions)
         {
-            if (lineLength > softLineWidth)
-                startNewLine();
-
-            pluginApp.put("{");
+            pluginApp.put("    ");
+            pluginApp.put("{ ");
             pluginApp.put(func.name);
-            pluginApp.put(`,"`);
+            pluginApp.put(`, "`);
             pluginApp.put(func.name);
-            pluginApp.put(`()","`);
+            pluginApp.put(`()", "`);
             pluginApp.put(func.file);
-            pluginApp.put(`"},`);
-
-            lineLength += func.name.length * 2 + func.file.length + syntaxOverheadLength;
+            pluginApp.put(`" },`);
+            newline();
         }
     }
 
